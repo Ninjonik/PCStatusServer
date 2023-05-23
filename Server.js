@@ -1,6 +1,7 @@
 const express = require('express');
 const net = require('net');
 const path = require('path');
+const ping = require('ping');
 const cors = require('cors');
 
 const app = express();
@@ -11,17 +12,50 @@ app.use(cors());
 // Serve the static build files
 app.use(express.static(path.join(__dirname, 'pcstatus/build')));
 
-// Handle ping requests
-app.get('/ping/:ipAddress/:port', (req, res) => {
-  const { ipAddress, port } = req.params;
-  const client = net.createConnection({ host: ipAddress, port });
+app.get('/ping/:ipAddress', async (req, res) => {
+  const { ipAddress } = req.params;
+  try {
+    const timeoutPromise = new Promise((resolve) => {
+      setTimeout(() => resolve({ time: 'timeout' }), 2000); // Set a timeout of 2000 milliseconds (2 seconds)
+    });
 
-  client.on('connect', () => {
+    const pingPromise = ping.promise.probe(ipAddress, {
+      extra: ['-c', '1'], // Send only one ping packet
+    });
+
+    const response = await Promise.race([timeoutPromise, pingPromise]);
+
+    if (response.time === 'timeout') {
+      // If the response time is 'timeout', consider it as a timeout
+      res.status(200).json({ status: 'error' });
+    } else {
+      const status = response.alive ? 'success' : 'error';
+      res.status(200).json({ status });
+    }
+  } catch (error) {
+    res.status(200).json({ status: 'error' });
+  }
+});
+
+app.get('/pingport/:ipAddress/:port', (req, res) => {
+  const { ipAddress, port } = req.params;
+  const timeout = 2000;
+
+  const client = new net.Socket();
+
+  const timeoutId = setTimeout(() => {
+    client.destroy();
+    res.status(200).json({ status: 'error' });
+  }, timeout);
+
+  client.connect(port, ipAddress, () => {
+    clearTimeout(timeoutId);
+    client.destroy();
     res.status(200).json({ status: 'success' });
-    client.end();
   });
 
   client.on('error', (error) => {
+    clearTimeout(timeoutId);
     res.status(200).json({ status: 'error' });
   });
 });
