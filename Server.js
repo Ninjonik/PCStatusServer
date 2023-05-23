@@ -3,6 +3,7 @@ const net = require('net');
 const path = require('path');
 const ping = require('ping');
 const cors = require('cors');
+const wol = require('wol');
 
 const app = express();
 
@@ -57,6 +58,18 @@ app.get('/pingport/:ipAddress/:port', (req, res) => {
   client.on('error', (error) => {
     clearTimeout(timeoutId);
     res.status(200).json({ status: 'error' });
+  });
+});
+
+app.get('/wol/:macAddress', (req, res) => {
+  const { macAddress } = req.params;
+
+  wol.wake(macAddress, function(err, result) {
+    if (err) {
+      res.status(200).json({ status: 'error' });
+    } else {
+      res.status(200).json({ status: 'success' });
+    }
   });
 });
 
