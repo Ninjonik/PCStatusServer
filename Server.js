@@ -4,6 +4,9 @@ const path = require('path');
 const ping = require('ping');
 const cors = require('cors');
 const wol = require('wol');
+const fs = require('fs');
+
+const jsonDataPath = path.join(__dirname, 'pcstatus/src/computers.json');
 
 var isElevated;
 try {
@@ -16,27 +19,24 @@ catch ( e ) {
 
 const app = express();
 
-// Enable CORS for all routes
 app.use(cors());
 
-// Serve the static build files
 app.use(express.static(path.join(__dirname, 'pcstatus/build')));
 
 app.get('/ping/:ipAddress', async (req, res) => {
   const { ipAddress } = req.params;
   try {
     const timeoutPromise = new Promise((resolve) => {
-      setTimeout(() => resolve({ time: 'timeout' }), 2000); // Set a timeout of 2000 milliseconds (2 seconds)
+      setTimeout(() => resolve({ time: 'timeout' }), 2000);
     });
 
     const pingPromise = ping.promise.probe(ipAddress, {
-      extra: isElevated ? ['-c', '1'] : [], // Add ['-c', '1'] if program has admin rights
+      extra: isElevated ? ['-c', '1'] : [], 
     });
 
     const response = await Promise.race([timeoutPromise, pingPromise]);
 
     if (response.time === 'timeout') {
-      // If the response time is 'timeout', consider it as a timeout
       res.status(200).json({ status: 'error' });
     } else {
       const status = response.alive ? 'success' : 'error';
@@ -82,12 +82,47 @@ app.get('/wol/:macAddress', (req, res) => {
   });
 });
 
-// Serve the index.html file for all other requests
+app.use(express.json());
+
+app.post('/add-computer', (req, res) => {
+  const { name, macAddress, ipAddress } = req.body;
+  const newComputer = { name, macAddress, ipAddress };
+
+  const jsonData = JSON.parse(fs.readFileSync(jsonDataPath, 'utf8'));
+
+  jsonData.push(newComputer);
+
+  fs.writeFileSync(jsonDataPath, JSON.stringify(jsonData, null, 2), 'utf8');
+
+  res.json({ success: true });
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'pcstatus/build', 'index.html'));
 });
 
-// Start the server
+app.post('/remove-computer', (req, res) => {
+  const { macAddress } = req.body;
+
+  const jsonData = JSON.parse(fs.readFileSync(jsonDataPath, 'utf8'));
+
+  const index = jsonData.findIndex((computer) => computer.macAddress === macAddress);
+
+  if (index !== -1) {
+    jsonData.splice(index, 1);
+
+    fs.writeFileSync(jsonDataPath, JSON.stringify(jsonData, null, 2), 'utf8');
+
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, message: 'Computer not found.' });
+  }
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'pcstatus/build', 'index.html'));
+});
+
 const PORT = process.env.PORT || 80;
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
