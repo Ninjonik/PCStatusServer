@@ -12,6 +12,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "is-admin": "^4.0.0",
     "ping": "^0.4.4",
     "wol": "^1.0.7"
   }

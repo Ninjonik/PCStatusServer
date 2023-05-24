@@ -5,6 +5,15 @@ const ping = require('ping');
 const cors = require('cors');
 const wol = require('wol');
 
+var isElevated;
+try {
+    child_process.execFileSync( "net", ["session"], { "stdio": "ignore" } );
+    isElevated = true;
+}
+catch ( e ) {
+    isElevated = false;
+}
+
 const app = express();
 
 // Enable CORS for all routes
@@ -21,7 +30,7 @@ app.get('/ping/:ipAddress', async (req, res) => {
     });
 
     const pingPromise = ping.promise.probe(ipAddress, {
-      extra: ['-c', '1'], // Send only one ping packet
+      extra: isElevated ? ['-c', '1'] : [], // Add ['-c', '1'] if program has admin rights
     });
 
     const response = await Promise.race([timeoutPromise, pingPromise]);
