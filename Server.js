@@ -5,6 +5,7 @@ const ping = require('ping');
 const cors = require('cors');
 const wol = require('wol');
 const fs = require('fs');
+const { isIP } = require('net');
 
 const jsonDataPath = path.join(__dirname, 'pcstatus/src/computers.json');
 
@@ -86,6 +87,17 @@ app.use(express.json());
 
 app.post('/add-computer', (req, res) => {
   const { name, macAddress, ipAddress } = req.body;
+
+  const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}.[0-9a-fA-F]{4}.[0-9a-fA-F]{4})$/;
+
+  if (!macRegex.test(macAddress)) {
+    return res.json({ error: 'Invalid MAC address' });
+  }
+
+  if (!isIP(ipAddress)) {
+    return res.json({ error: 'Invalid IP address' });
+  }
+
   const newComputer = { name, macAddress, ipAddress };
 
   const jsonData = JSON.parse(fs.readFileSync(jsonDataPath, 'utf8'));
@@ -96,6 +108,8 @@ app.post('/add-computer', (req, res) => {
 
   res.json({ success: true });
 });
+
+
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'pcstatus/build', 'index.html'));
