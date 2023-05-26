@@ -91,11 +91,11 @@ app.post('/add-computer', (req, res) => {
   const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}.[0-9a-fA-F]{4}.[0-9a-fA-F]{4})$/;
 
   if (!macRegex.test(macAddress)) {
-    return res.json({ error: 'Invalid MAC address' });
+    return res.json({ error: 'Neplatná MAC Adresa' });
   }
 
   if (!isIP(ipAddress)) {
-    return res.json({ error: 'Invalid IP address' });
+    return res.json({ error: 'Neplatná IP Adresa' });
   }
 
   const newComputer = { name, macAddress, ipAddress };
