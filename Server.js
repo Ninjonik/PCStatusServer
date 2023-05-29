@@ -133,6 +133,25 @@ app.post('/remove-computer', (req, res) => {
   }
 });
 
+app.post('/edit-computer', (req, res) => {
+  const { ipAddress, name } = req.body; // assuming you're also receiving the updated name
+
+  const jsonData = JSON.parse(fs.readFileSync(jsonDataPath, 'utf8'));
+
+  const index = jsonData.findIndex((computer) => computer.ipAddress === ipAddress);
+
+  if (index !== -1) {
+    jsonData[index].name = name; // update the name property of the found computer
+
+    fs.writeFileSync(jsonDataPath, JSON.stringify(jsonData, null, 2), 'utf8');
+
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, message: 'Computer not found.' });
+  }
+});
+
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'pcstatus/build', 'index.html'));
 });
